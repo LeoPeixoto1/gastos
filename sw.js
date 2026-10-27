@@ -3,7 +3,7 @@
 // - Recebe arquivos do "Compartilhar" do Android.
 // Os dados nunca passam por aqui: as chamadas ao servidor (script.google.com) vão direto pela rede.
 
-const VERSAO = 'gastos-c4d0a2107f'; // trocado automaticamente pelo tools/build-pwa.mjs
+const VERSAO = 'gastos-56827c1ae9'; // trocado automaticamente pelo tools/build-pwa.mjs
 const ARQUIVOS = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

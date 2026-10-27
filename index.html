@@ -1677,6 +1677,21 @@
     });
   }
 
+  /** Explica as causas comuns quando o app não consegue falar com o Apps Script. */
+  function dicasServidor() {
+    if (NA_PLANILHA) return '';
+    const c = conexao();
+    const url = c ? c.url : '';
+    return (
+      '<p class="dica">Servidor: <a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a></p>' +
+      '<p class="dica">Abra esse link numa janela anônima:</p><ul class="dica">' +
+      '<li><b>Pede login do Google</b> → a implantação precisa estar com "Quem pode acessar: <b>Qualquer pessoa</b>" e "Executar como: <b>Eu</b>".</li>' +
+      '<li><b>"Função de script não encontrada"</b> → publique uma <b>Nova versão</b> da implantação depois de colar o código.</li>' +
+      '<li><b>Pede autorização</b> → no editor do Apps Script, rode a função <code>doGet</code> uma vez e autorize.</li>' +
+      '<li><b>"Servidor do app Gastos funcionando"</b> → o servidor está ok; gere o QR de novo e confira a URL /exec.</li></ul>'
+    );
+  }
+
   function desconectar(msg) {
     esquecer('conexao');
     telaConectar(msg);
@@ -1724,17 +1739,29 @@
       S.cfg = await run('apiInicio');
     } catch (e) {
       if (e.auth) return;
+      S.ultimoErro = e.message;
       const faltaSetup = /não encontrada|Configurar planilha/i.test(e.message);
       mostrarSistema(
         '<div class="card"><h3>' + (faltaSetup ? 'Falta preparar a planilha' : 'Não consegui abrir') + '</h3>' +
           (faltaSetup
             ? '<p>A planilha ainda não tem a estrutura nova. Posso criar agora: as abas antigas são renomeadas para "Antigo - …" e ocultadas (nada é apagado), e seus lançamentos, fixos, financiamentos, receitas e configurações são copiados.</p>' +
               '<button id="btn-configurar" class="primario largo">🛠️ Configurar agora</button>'
-            : '<button id="btn-tentar" class="primario largo">Tentar de novo</button>') +
-          '<p class="dica">' + esc(e.message) + '</p></div>'
+            : '<p class="aviso">' + esc(e.message) + '</p>' + dicasServidor() +
+              '<div class="botoes"><button id="btn-tentar" class="primario">Tentar de novo</button>' +
+              (NA_PLANILHA ? '' : '<button id="btn-reconectar" class="secundario">Reconectar</button>') + '</div>') +
+          (faltaSetup ? '<p class="dica">' + esc(e.message) + '</p>' : '') + '</div>'
       );
       const tentar = $('#btn-tentar');
-      if (tentar) tentar.addEventListener('click', iniciar);
+      if (tentar) {
+        tentar.addEventListener('click', async () => {
+          ocupado(tentar, 'Tentando…');
+          await iniciar();
+          // se continuou na tela de erro, a tela foi redesenhada; avisa para não parecer que nada aconteceu
+          if ($('#tela-sistema').classList.contains('ativa')) toast('Ainda não deu: ' + S.ultimoErro, true);
+        });
+      }
+      const reconectar = $('#btn-reconectar');
+      if (reconectar) reconectar.addEventListener('click', () => desconectar());
       const btn = $('#btn-configurar');
       if (btn) {
         btn.addEventListener('click', async () => {
