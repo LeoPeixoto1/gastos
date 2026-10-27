@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <title>Gastos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Controle de gastos do casal com IA" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Gastos" />
+    <meta name="referrer" content="no-referrer" />
+    <meta charset="utf-8" />
+    <meta name="theme-color" content="#1f3b57" />
+    <style>
+  :root {
+    --fundo: #f4f6f8;
+    --card: #ffffff;
+    --texto: #1b2430;
+    --suave: #667085;
+    --borda: #e3e7ec;
+    --primaria: #1f6feb;
+    --primaria-texto: #ffffff;
+    --azul-escuro: #1f3b57;
+    --verde: #188038;
+    --vermelho: #c5221f;
+    --amarelo: #b26a00;
+    --barra: #c9d6e6;
+    --barra-renda: #b7e1c1;
+    --barra-gasto: #1f6feb;
+    --raio: 14px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fundo: #0f1419;
+      --card: #1a2129;
+      --texto: #e6e9ed;
+      --suave: #9aa4b2;
+      --borda: #2a333d;
+      --primaria: #4c8dff;
+      --azul-escuro: #14283c;
+      --verde: #4cc26f;
+      --vermelho: #ff6b62;
+      --amarelo: #f2b13c;
+      --barra: #33414f;
+      --barra-renda: #2f6b40;
+      --barra-gasto: #4c8dff;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--fundo);
+    color: var(--texto);
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 12px; overflow-x: clip; }
+  h1 { font-size: 18px; margin: 0; }
+  h2 { font-size: 17px; margin: 0; }
+  h3 { font-size: 15px; margin: 0 0 10px; }
+  h3 small { color: var(--suave); font-weight: 400; }
+  .secao { margin: 22px 4px 8px; font-size: 14px; color: var(--suave); text-transform: uppercase; letter-spacing: .04em; }
+
+  .topo {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top)); background: var(--azul-escuro); color: #fff;
+  }
+  .topo h1 { flex: 1; }
+  .chip { font-size: 11px; background: rgba(255,255,255,.18); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .quem { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .quem select { background: rgba(255,255,255,.15); color: #fff; border: 0; padding: 6px 8px; border-radius: 8px; }
+  .quem option { color: #000; }
+
+  .tela { display: none; }
+  .tela.ativa { display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 14px; margin-bottom: 12px; }
+  .rotulo { display: block; font-weight: 600; margin-bottom: 8px; }
+  textarea, input, select {
+    width: 100%; font: inherit; color: var(--texto); background: var(--fundo);
+    border: 1px solid var(--borda); border-radius: 10px; padding: 9px 10px; min-width: 0;
+  }
+  textarea { resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--primaria); outline-offset: -1px; }
+
+  button, .botao {
+    font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  }
+  .primario { background: var(--primaria); color: var(--primaria-texto); }
+  .secundario { background: transparent; color: var(--primaria); border: 1px solid var(--borda); }
+  .perigo { background: transparent; color: var(--vermelho); border: 1px solid var(--borda); }
+  .icone { background: transparent; color: var(--texto); font-size: 24px; padding: 4px 14px; }
+  button:disabled { opacity: .55; cursor: wait; }
+  .largo { width: 100%; margin-bottom: 12px; }
+  .botoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .botoes > * { flex: 1 1 auto; }
+
+  .dica { color: var(--suave); font-size: 13px; margin: 8px 0 0; }
+  .aviso { background: #fff4e5; color: #8a5300; padding: 8px 10px; border-radius: 8px; font-size: 13px; margin: 10px 0 0; }
+  @media (prefers-color-scheme: dark) { .aviso { background: #3a2a10; color: #f2c47c; } }
+
+  /* formulário de item */
+  .item-form { position: relative; }
+  .item-form .fechar { position: absolute; top: 6px; right: 6px; background: transparent; color: var(--suave); font-size: 20px; padding: 4px 10px; }
+  .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 8px; }
+  .campos label, .campo { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--suave); }
+  .campos .inteiro { grid-column: 1 / -1; }
+  .tipo-toggle { display: inline-flex; border: 1px solid var(--borda); border-radius: 999px; overflow: hidden; }
+  .tipo-toggle button { border-radius: 0; padding: 5px 12px; background: transparent; color: var(--suave); font-size: 13px; }
+  .tipo-toggle button.ativo { background: var(--primaria); color: #fff; }
+  .tipo-toggle button.ativo.receita { background: var(--verde); }
+  .pista { font-size: 12px; color: var(--suave); margin-top: 8px; }
+
+  .fixo-baixo {
+    position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 4;
+    display: flex; gap: 8px; padding: 10px 0; background: linear-gradient(transparent, var(--fundo) 30%);
+  }
+  .fixo-baixo > * { flex: 1; }
+
+  /* listas */
+  .lista { display: flex; flex-direction: column; }
+  .linha {
+    display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--borda);
+    background: none; color: inherit; text-align: left; font-weight: 400; border-radius: 0; width: 100%;
+  }
+  .lista > .linha:last-child { border-bottom: 0; }
+  .linha .info { flex: 1; min-width: 0; }
+  .linha .desc { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .linha .meta { font-size: 12px; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .linha .valor { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .valor.pos { color: var(--verde); }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--fundo); border: 1px solid var(--borda); color: var(--suave); margin-left: 4px; }
+  .badge.alerta { color: var(--amarelo); border-color: currentColor; }
+  .carregando { color: var(--suave); padding: 14px 4px; }
+  .vazio { color: var(--suave); padding: 14px 4px; text-align: center; }
+
+  /* painel */
+  .mes-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+  @media (min-width: 560px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+  .kpi { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 12px; }
+  .kpi .r { font-size: 12px; color: var(--suave); }
+  .kpi .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .kpi .s { font-size: 12px; color: var(--suave); margin-top: 2px; }
+  .neg { color: var(--vermelho) !important; }
+  .posi { color: var(--verde) !important; }
+
+  .cat { display: block; width: 100%; background: none; color: inherit; padding: 6px 0; text-align: left; font-weight: 400; border-radius: 6px; }
+  .cat .topo-cat { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+  .cat .topo-cat b { font-variant-numeric: tabular-nums; }
+  .trilho { height: 8px; background: var(--barra); border-radius: 99px; overflow: hidden; margin-top: 5px; opacity: .6; }
+  .trilho.orc { opacity: 1; }
+  .enchimento { height: 100%; background: var(--barra-gasto); border-radius: 99px; }
+  .enchimento.estouro { background: var(--vermelho); }
+  .enchimento.perto { background: var(--amarelo); }
+  .cat .sub { font-size: 12px; color: var(--suave); margin-top: 3px; }
+  .cat.selecionada { background: var(--fundo); }
+
+  .leg { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 3px 0 6px; }
+  .leg.renda { background: var(--barra-renda); }
+  .leg.gasto { background: var(--barra-gasto); }
+  .serie { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 8px; }
+  .serie .col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; cursor: pointer; background: none; padding: 0; border-radius: 6px; }
+  .serie .barras { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+  .serie .b { width: 42%; max-width: 16px; border-radius: 3px 3px 0 0; min-height: 1px; }
+  .serie .b.renda { background: var(--barra-renda); }
+  .serie .b.gasto { background: var(--barra-gasto); }
+  .serie .col.futuro .b { opacity: .45; }
+  .serie .col.atual { background: var(--fundo); }
+  .serie .rot { font-size: 10px; color: var(--suave); margin-top: 4px; white-space: nowrap; overflow: hidden; max-width: 100%; }
+  .serie .col.atual .rot { color: var(--texto); font-weight: 700; }
+
+  table.simples { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.simples th { text-align: right; font-size: 12px; color: var(--suave); font-weight: 500; padding: 4px 0; }
+  table.simples th:first-child, table.simples td:first-child { text-align: left; }
+  table.simples td { text-align: right; padding: 6px 0; border-top: 1px solid var(--borda); font-variant-numeric: tabular-nums; }
+
+  .titulo-linha { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .titulo-linha h3 { margin: 0; }
+  .titulo-linha select { width: auto; max-width: 50%; padding: 5px 8px; font-size: 13px; }
+
+  /* importar */
+  .segmentado { display: flex; border: 1px solid var(--borda); border-radius: 10px; overflow: hidden; }
+  .segmentado button { flex: 1; border-radius: 0; background: transparent; color: var(--suave); font-size: 14px; }
+  .segmentado button.ativo { background: var(--primaria); color: #fff; }
+  #tela-importar .botao.largo { margin: 12px 0 0; }
+  .resumo-import { font-size: 13px; color: var(--suave); margin: 4px 4px 8px; }
+  .imp { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 10px 4px; border-bottom: 1px solid var(--borda); }
+  .imp.desmarcado { opacity: .55; }
+  .imp input[type=checkbox] { width: 20px; height: 20px; margin-top: 2px; }
+  .imp .desc-in { font-weight: 600; padding: 4px 6px; }
+  .imp .sub { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--suave); }
+  .imp .sub select { width: auto; padding: 4px 6px; font-size: 12px; }
+
+  /* config */
+  .lista-edit { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .linha-campo { display: flex; gap: 6px; align-items: center; }
+  .linha-campo > input { flex: 1; }
+  .linha-campo > button { flex: 0 0 auto; }
+  .remover { background: transparent; color: var(--suave); font-size: 20px; padding: 4px 10px; }
+  .cat-edit { border-top: 1px solid var(--borda); padding: 10px 0; display: grid; grid-template-columns: 1fr 110px auto; gap: 6px; }
+  .cat-edit:first-child { border-top: 0; padding-top: 0; }
+  .cat-edit .dica-in { grid-column: 1 / 3; font-size: 13px; }
+  .renomeado { font-size: 11px; color: var(--amarelo); grid-column: 1 / -1; }
+  .rodape-config { margin: 4px 4px 0; }
+  #tela-config .largo { margin: 0 0 4px; }
+
+  /* chat */
+  .chat { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+  .msg { padding: 10px 12px; border-radius: 14px; max-width: 92%; }
+  .msg.user { align-self: flex-end; background: var(--primaria); color: #fff; }
+  .msg.model { align-self: flex-start; background: var(--card); border: 1px solid var(--borda); }
+  .sugestoes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .sugestoes button { background: var(--card); color: var(--texto); border: 1px solid var(--borda); font-weight: 400; font-size: 13px; padding: 7px 10px; border-radius: 999px; }
+  .form-chat { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); display: flex; gap: 8px; padding: 8px 0; background: var(--fundo); }
+  .form-chat button { flex: 0 0 auto; }
+
+  .md h2, .md h3 { font-size: 15px; margin: 12px 0 4px; }
+  .md h2:first-child, .md h3:first-child { margin-top: 0; }
+  .md p { margin: 4px 0; }
+  .md ul { margin: 4px 0; padding-left: 20px; }
+
+  /* navegação */
+  [hidden] { display: none !important; }
+  .abas {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 6;
+    display: flex; background: var(--card); border-top: 1px solid var(--borda);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .abas button { flex: 1; flex-direction: column; gap: 0; background: none; color: var(--suave); font-size: 11px; padding: 8px 0 10px; border-radius: 0; }
+  .abas button span { font-size: 20px; filter: grayscale(1); opacity: .7; }
+  .abas button.ativo { color: var(--primaria); }
+  .abas button.ativo span { filter: none; opacity: 1; }
+
+  dialog { border: 0; border-radius: var(--raio); padding: 0; width: min(520px, calc(100vw - 24px)); background: var(--card); color: var(--texto); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog form { padding: 16px; margin: 0; }
+
+  #toast {
+    position: fixed; left: 50%; top: calc(60px + env(safe-area-inset-top)); transform: translateX(-50%) translateY(-12px);
+    background: #1b2430; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 20;
+    opacity: 0; pointer-events: none; transition: .2s; max-width: calc(100vw - 32px);
+  }
+  #toast.mostrar { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.erro { background: var(--vermelho); }
+
+  .girando::before { content: ''; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: gira .7s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+</style>
+
+  </head>
+  <body>
+    <header class="topo">
+      <h1>💰 Gastos</h1>
+      <span id="offline" class="chip" hidden>📴 offline</span>
+      <span id="fila" class="chip" hidden></span>
+      <label class="quem" title="Pessoa padrão dos novos lançamentos">
+        <span>Sou</span>
+        <select id="pessoa-padrao"></select>
+      </label>
+    </header>
+
+    <main>
+      <section id="tela-sistema" class="tela"></section>
+
+      <!-- LANÇAR -->
+      <section id="tela-lancar" class="tela ativa">
+        <div id="dica-ios" class="card aviso" hidden>
+          <b>Para instalar no iPhone:</b> toque em <b>Copiar código</b>, depois em Compartilhar → <b>Adicionar à Tela de Início</b>. Abra pelo ícone novo e cole o código (o iPhone separa o app instalado do Safari).
+          <div class="botoes"><button id="btn-ios-copiar" class="secundario">📋 Copiar código</button></div>
+        </div>
+        <div class="card">
+          <label class="rotulo" for="txt">O que você gastou ou recebeu?</label>
+          <textarea id="txt" rows="3" placeholder="Ex: mercado 154,90 ontem no crédito; uber 23 pix; tênis 600 em 3x; recebi 500 de freela"></textarea>
+          <div class="botoes">
+            <button id="btn-ia" class="primario">✨ Interpretar</button>
+            <label class="botao secundario">📷 Foto da nota<input type="file" id="foto" accept="image/*,application/pdf" hidden /></label>
+            <button id="btn-manual" class="secundario">+ Manual</button>
+          </div>
+          <p id="aviso-chave" class="aviso" hidden>⚠️ Configure a chave do Gemini na aba ⚙️ Config para usar a IA. O lançamento manual funciona normalmente.</p>
+        </div>
+
+        <div id="rascunhos"></div>
+        <div id="acoes-rascunho" class="fixo-baixo" hidden>
+          <button id="btn-descartar" class="secundario">Descartar</button>
+          <button id="btn-salvar" class="primario">Salvar</button>
+        </div>
+
+        <h2 class="secao">Últimos lançamentos</h2>
+        <div id="ultimos" class="card lista"><div class="carregando">Carregando…</div></div>
+      </section>
+
+      <!-- PAINEL -->
+      <section id="tela-painel" class="tela">
+        <div class="mes-nav">
+          <button id="mes-ant" class="icone" aria-label="Mês anterior">‹</button>
+          <h2 id="mes-nome">—</h2>
+          <button id="mes-prox" class="icone" aria-label="Próximo mês">›</button>
+        </div>
+        <div id="kpis" class="kpis"></div>
+
+        <button id="btn-analisar" class="secundario largo">✨ Analisar este mês com IA</button>
+        <div id="analise" class="card md" hidden></div>
+
+        <div class="card">
+          <h3>Por categoria</h3>
+          <div id="cats"></div>
+        </div>
+        <div class="card">
+          <h3>Evolução <small><span class="leg renda"></span>renda <span class="leg gasto"></span>gastos</small></h3>
+          <div id="serie" class="serie"></div>
+          <p class="dica">Meses futuros mostram só o que já está comprometido (parcelas, fixos e financiamentos).</p>
+        </div>
+        <div class="card">
+          <h3>Por pessoa</h3>
+          <div id="pessoas"></div>
+        </div>
+        <div class="card" id="card-fin" hidden>
+          <h3>Financiamentos</h3>
+          <div id="fin"></div>
+        </div>
+        <div class="card">
+          <div class="titulo-linha">
+            <h3>Movimentos do mês</h3>
+            <select id="filtro-cat" aria-label="Filtrar por categoria"></select>
+          </div>
+          <div id="itens" class="lista"></div>
+        </div>
+      </section>
+
+      <!-- IMPORTAR -->
+      <section id="tela-importar" class="tela">
+        <div class="card">
+          <h3>Importar fatura ou extrato</h3>
+          <div class="segmentado" id="modo">
+            <button data-modo="fatura" class="ativo">Fatura do cartão</button>
+            <button data-modo="extrato">Extrato da conta</button>
+          </div>
+          <div class="campos">
+            <label id="campo-mes">Vencimento da fatura<input type="month" id="mes-fatura" /></label>
+            <label>Forma de pagamento<select id="forma-import"></select></label>
+          </div>
+          <div id="import-pendente" class="aviso" hidden>
+            📎 Recebido: <b id="import-pendente-nome"></b>
+            <div class="botoes">
+              <button id="btn-ler-pendente" class="primario">Ler como fatura/extrato</button>
+              <button id="btn-pendente-nota" class="secundario">É uma nota (lançar)</button>
+            </div>
+          </div>
+          <label class="botao primario largo">📄 Escolher arquivo (PDF, foto ou CSV)<input type="file" id="arquivo" accept=".pdf,.csv,.txt,.ofx,image/*" hidden /></label>
+          <p class="dica">A IA lê o arquivo, categoriza com base no seu histórico e marca o que parece já estar cadastrado. Você revisa antes de salvar. PDF com senha não funciona — use print ou CSV.</p>
+        </div>
+        <div id="import-resultado" hidden>
+          <div id="import-cartoes" class="card" hidden></div>
+          <div id="import-resumo" class="resumo-import"></div>
+          <div id="import-lista" class="card lista"></div>
+          <div class="fixo-baixo">
+            <button id="btn-cancelar-import" class="secundario">Cancelar</button>
+            <button id="btn-importar" class="primario">Importar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- IA -->
+      <section id="tela-ia" class="tela">
+        <div id="chat" class="chat">
+          <div class="msg model md">Oi! Pergunte qualquer coisa sobre os seus gastos. Uso os dados dos últimos 6 meses e os compromissos dos próximos 6.</div>
+        </div>
+        <div class="sugestoes" id="sugestoes">
+          <button>Onde posso economizar este mês?</button>
+          <button>Quanto já temos comprometido nos próximos meses?</button>
+          <button>Quanto gastamos com alimentação nos últimos 3 meses?</button>
+          <button>Quais assinaturas temos e quanto somam?</button>
+        </div>
+        <form id="form-chat" class="form-chat">
+          <input id="pergunta" autocomplete="off" placeholder="Pergunte sobre seus gastos…" />
+          <button class="primario" aria-label="Enviar">➤</button>
+        </form>
+      </section>
+
+      <!-- CONFIG -->
+      <section id="tela-config" class="tela">
+        <div id="config-carregando" class="carregando">Carregando…</div>
+        <div id="config-conteudo" hidden>
+          <div class="card">
+            <h3>🤖 Inteligência artificial</h3>
+            <p id="chave-status" class="dica"></p>
+            <div class="linha-campo">
+              <input id="chave" type="password" autocomplete="off" placeholder="Cole a chave do Gemini (aistudio.google.com/apikey)" />
+              <button id="btn-chave" class="secundario">Salvar e testar</button>
+            </div>
+            <div class="campos">
+              <label class="inteiro">Modelo do Gemini<input id="cfg-modelo" data-cfg="modelo" /></label>
+            </div>
+            <p id="modelo-uso" class="dica"></p>
+          </div>
+
+          <div class="card">
+            <h3>💳 Cartão de crédito</h3>
+            <div class="campos">
+              <label>Dia de fechamento<input id="cfg-fech" type="number" min="1" max="31" data-cfg="diaFechamento" /></label>
+              <label>Dia de vencimento<input id="cfg-venc" type="number" min="1" max="31" data-cfg="diaVencimento" /></label>
+            </div>
+            <p id="cfg-exemplo" class="dica"></p>
+          </div>
+
+          <div class="card">
+            <h3>🏷️ Categorias de gasto</h3>
+            <p class="dica">O orçamento aparece no painel. A dica explica o que entra em cada categoria e é usada pela IA para categorizar.</p>
+            <div id="cfg-categorias"></div>
+            <button class="secundario largo" data-add="categorias">+ Categoria</button>
+          </div>
+
+          <div class="card">
+            <h3>👥 Pessoas</h3>
+            <div id="cfg-pessoas" class="lista-edit"></div>
+            <button class="secundario largo" data-add="pessoas">+ Pessoa</button>
+            <div class="campos">
+              <label class="inteiro">Pessoa compartilhada (dividida igualmente entre as outras)<select id="cfg-compartilhada" data-cfg="pessoaCompartilhada"></select></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>💸 Formas de pagamento</h3>
+            <p class="dica">Formas com "crédito" ou "cartão" no nome seguem a regra de fechamento da fatura.</p>
+            <div id="cfg-formas" class="lista-edit"></div>
+            <button class="secundario largo" data-add="formas">+ Forma de pagamento</button>
+          </div>
+
+          <div class="card">
+            <h3>💰 Categorias de receita</h3>
+            <div id="cfg-catReceita" class="lista-edit"></div>
+            <button class="secundario largo" data-add="catReceita">+ Categoria de receita</button>
+          </div>
+
+          <div class="card">
+            <h3>📬 Automático</h3>
+            <div class="campos">
+              <label class="inteiro">E-mails do resumo mensal (separados por vírgula; vazio = o seu)<input id="cfg-emails" data-cfg="emails" inputmode="email" /></label>
+            </div>
+            <p id="gatilhos-status" class="dica"></p>
+            <div class="botoes">
+              <button id="btn-gatilhos" class="secundario"></button>
+              <button id="btn-resumo" class="secundario">🔄 Atualizar aba Resumo</button>
+            </div>
+          </div>
+
+          <div class="card" id="card-aparelho" hidden>
+            <h3>📱 Este aparelho</h3>
+            <p class="dica">Para conectar outro celular, use o QR da planilha ou copie o código e cole na tela de conexão dele.</p>
+            <div class="botoes">
+              <button id="btn-instalar" class="primario" hidden>📲 Instalar app</button>
+              <button id="btn-copiar-codigo" class="secundario">📋 Copiar código de conexão</button>
+              <button id="btn-desconectar" class="perigo">Desconectar</button>
+            </div>
+          </div>
+
+          <p class="dica rodape-config">Renomear um item atualiza também os lançamentos antigos. Remover não apaga nada: os lançamentos continuam com o nome antigo. Gastos fixos, financiamentos e receitas recorrentes são editados nas abas da planilha.</p>
+
+          <div class="fixo-baixo">
+            <button id="btn-config-desfazer" class="secundario">Desfazer</button>
+            <button id="btn-config-salvar" class="primario">Salvar configurações</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="abas">
+      <button data-tela="lancar" class="ativo"><span>➕</span>Lançar</button>
+      <button data-tela="painel"><span>📊</span>Painel</button>
+      <button data-tela="importar"><span>📄</span>Importar</button>
+      <button data-tela="ia"><span>✨</span>IA</button>
+      <button data-tela="config"><span>⚙️</span>Config</button>
+    </nav>
+
+    <dialog id="dlg-editar">
+      <form method="dialog" id="form-editar"></form>
+    </dialog>
+
+    <div id="toast" role="status"></div>
+
+    <script>
+  const S = {
+    cfg: null,
+    mes: null, // "AAAA-MM" exibido no painel
+    painel: null,
+    painelPedido: 0,
+    filtroCat: '',
+    rascunhos: [],
+    edicao: [],
+    chat: [],
+    imp: null,
+    modo: 'fatura',
+  };
+
+  // ---------------------------------------------------------------- utilidades
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const brl = (v) => (v < 0 ? '−' : '') + 'R$ ' + Math.abs(+v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const idx = (chave) => { const [a, m] = chave.split('-').map(Number); return a * 12 + m - 1; };
+  const chave = (i) => Math.floor(i / 12) + '-' + String((i % 12) + 1).padStart(2, '0');
+  const mesLongo = (c) => MESES[idx(c) % 12] + ' ' + Math.floor(idx(c) / 12);
+  const mesCurto = (i) => MESES[i % 12].slice(0, 3) + '/' + String(Math.floor(i / 12)).slice(2);
+  const dataBR = (s) => (s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '');
+  const ehCredito = (f) => /cr[eé]dito|cart[aã]o/i.test(f || '');
+
+  function guardar(k, v) { try { localStorage.setItem('gastos.' + k, v); } catch (e) {} }
+  function lembrar(k) { try { return localStorage.getItem('gastos.' + k); } catch (e) { return null; } }
+  function esquecer(k) { try { localStorage.removeItem('gastos.' + k); } catch (e) {} }
+
+  // ---------------------------------------------------------------- comunicação com o servidor
+  // Dentro da planilha (painel lateral) usa google.script.run; no app PWA, chama o web app (doPost) com o código de acesso.
+  const NA_PLANILHA = !!(window.google && google.script && google.script.run);
+  // Respostas guardadas no aparelho para abrir o app sem internet.
+  const CACHEAVEIS = ['apiInicio', 'apiUltimos', 'apiPainel', 'apiConfig'];
+
+  function conexao() {
+    try {
+      const c = JSON.parse(lembrar('conexao'));
+      return c && c.url && c.token ? c : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Aceita o link do QR (…#conectar=XXX) ou só o código XXX. */
+  function decodificarConexao(texto) {
+    const m = String(texto || '').match(/conectar=([^&\s]+)/);
+    try {
+      const c = JSON.parse(atob(decodeURIComponent(m ? m[1] : String(texto).trim())));
+      return c.url && c.token ? c : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  const codigoConexao = () => btoa(JSON.stringify(conexao()));
+
+  async function run(fn, ...args) {
+    if (NA_PLANILHA) return new Promise((ok, falha) => google.script.run.withSuccessHandler(ok).withFailureHandler(falha)[fn](...args));
+    const c = conexao();
+    if (!c) throw Object.assign(new Error('App não conectado.'), { auth: true });
+    const chaveCache = 'cache.' + fn + JSON.stringify(args);
+    let texto;
+    try {
+      const r = await fetch(c.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // sem preflight de CORS
+        body: JSON.stringify({ token: c.token, fn, args }),
+      });
+      texto = await r.text();
+    } catch (e) {
+      const cache = CACHEAVEIS.includes(fn) && lembrar(chaveCache);
+      if (cache) {
+        indicarOffline(true);
+        return JSON.parse(cache);
+      }
+      throw Object.assign(new Error(navigator.onLine ? 'Não consegui falar com o servidor. Tente de novo.' : 'Sem internet.'), { offline: true });
+    }
+    indicarOffline(false);
+    let resp;
+    try {
+      resp = JSON.parse(texto);
+    } catch (e) {
+      throw new Error('Resposta inesperada do servidor. Confira se a implantação está com acesso "Qualquer pessoa" e se a URL termina em /exec.');
+    }
+    if (!resp.ok) {
+      if (resp.auth) desconectar(resp.erro);
+      throw Object.assign(new Error(resp.erro), { auth: !!resp.auth });
+    }
+    if (CACHEAVEIS.includes(fn)) guardar(chaveCache, JSON.stringify(resp.r));
+    return resp.r;
+  }
+
+  function indicarOffline(sim) {
+    const el = $('#offline');
+    if (el) el.hidden = !sim;
+  }
+
+  // Lançamentos feitos sem internet ficam numa fila no aparelho. Cada item tem ID próprio,
+  // então reenviar é seguro: o servidor ignora IDs que já existem.
+  function fila() {
+    try {
+      return JSON.parse(lembrar('fila')) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function gravarFila(f) {
+    guardar('fila', JSON.stringify(f));
+    const el = $('#fila');
+    if (el) {
+      el.hidden = !f.length;
+      el.textContent = '⏳ ' + f.length + ' pendente' + (f.length > 1 ? 's' : '');
+    }
+  }
+  async function enviarFila() {
+    const f = fila();
+    if (!f.length || S.enviandoFila || NA_PLANILHA) return;
+    S.enviandoFila = true;
+    try {
+      await run('apiSalvar', f);
+      gravarFila(fila().filter((x) => !f.some((y) => y.id === x.id)));
+      toast('✅ ' + f.length + ' lançamento(s) feito(s) offline foram enviados');
+      dadosMudaram();
+    } catch (e) {
+      if (!e.offline) erro(e);
+    } finally {
+      S.enviandoFila = false;
+    }
+  }
+  const novoIdCliente = () => Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => b.toString(16).padStart(2, '0')).join('');
+
+  let toastTimer;
+  function toast(msg, erro) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.className = 'mostrar' + (erro ? ' erro' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (t.className = ''), erro ? 6000 : 3000);
+  }
+  function erro(e) { toast((e && e.message) || String(e), true); }
+
+  function ocupado(btn, texto) {
+    if (texto) {
+      btn.dataset.orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="girando"></span>' + esc(texto);
+    } else if (btn.dataset.orig) {
+      btn.disabled = false;
+      btn.innerHTML = btn.dataset.orig;
+    }
+  }
+
+  /** Primeiro clique arma, segundo confirma (confirm() nem sempre funciona dentro do Apps Script). */
+  function confirmouClique(btn, texto) {
+    if (btn.dataset.armado) return true;
+    btn.dataset.armado = '1';
+    const orig = btn.textContent;
+    btn.textContent = texto || 'Toque de novo para confirmar';
+    setTimeout(() => { delete btn.dataset.armado; btn.textContent = orig; }, 3500);
+    return false;
+  }
+
+  function numero(v) {
+    if (typeof v === 'number') return v;
+    let s = String(v || '').replace(/[R$\s]/g, '');
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+  }
+  const fmtNum = (v) => (typeof v === 'number' ? v.toFixed(2).replace('.', ',') : v || '');
+
+  function competencia(dataStr, forma) {
+    if (!dataStr) return null;
+    const [a, m, d] = dataStr.split('-').map(Number);
+    let i = a * 12 + m - 1;
+    if (ehCredito(forma)) {
+      if (d > S.cfg.diaFechamento) i++;
+      if (S.cfg.diaVencimento <= S.cfg.diaFechamento) i++;
+    }
+    return i;
+  }
+
+  function md(texto) {
+    const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    let html = '';
+    let lista = false;
+    String(texto || '').split('\n').forEach((l) => {
+      const item = l.match(/^\s*[-*]\s+(.*)/);
+      if (item) {
+        if (!lista) html += '<ul>';
+        lista = true;
+        html += '<li>' + inline(item[1]) + '</li>';
+        return;
+      }
+      if (lista) html += '</ul>';
+      lista = false;
+      const t = l.match(/^#{1,4}\s+(.*)/);
+      if (t) html += '<h3>' + inline(t[1]) + '</h3>';
+      else if (l.trim()) html += '<p>' + inline(l) + '</p>';
+    });
+    return html + (lista ? '</ul>' : '');
+  }
+
+  const opcoes = (lista, sel) => lista.map((v) => '<option' + (v === sel ? ' selected' : '') + '>' + esc(v) + '</option>').join('');
+  const pessoaPadrao = () => $('#pessoa-padrao').value || S.cfg.pessoas[0];
+
+  // ---------------------------------------------------------------- arquivos
+  function paraBase64(blob) {
+    return new Promise((ok, falha) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result).split(',')[1]);
+      r.onerror = () => falha(r.error);
+      r.readAsDataURL(blob);
+    });
+  }
+
+  /** Fotos de celular são enormes; reduz para no máx. 2000px em JPEG antes de enviar. */
+  async function comprimirImagem(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, falha) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = falha;
+        i.src = url;
+      });
+      const k = Math.min(1, 2000 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k);
+      c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      return { mime: 'image/jpeg', base64: c.toDataURL('image/jpeg', 0.85).split(',')[1] };
+    } catch (e) {
+      return { mime: file.type, base64: await paraBase64(file) };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  async function prepararArquivo(file) {
+    const nome = file.name.toLowerCase();
+    if (file.type.startsWith('text/') || /\.(csv|txt|ofx)$/.test(nome)) return { texto: await file.text() };
+    if (file.type.startsWith('image/')) return comprimirImagem(file);
+    if (file.size > 15e6) throw new Error('Arquivo muito grande (máx. 15 MB).');
+    return { mime: file.type || 'application/pdf', base64: await paraBase64(file) };
+  }
+
+  // ---------------------------------------------------------------- formulário de item
+  function pista(it) {
+    if (it.tipo === 'receita') return 'Entra como receita em ' + (it.data ? mesCurto(competencia(it.data, '')) : '—');
+    const v = numero(it.valor);
+    const n = Math.max(1, parseInt(it.parcelas, 10) || 1);
+    const c = competencia(it.data, it.forma);
+    const partes = [];
+    if (n > 1 && v) partes.push(n + 'x de ' + brl(v / n));
+    if (c !== null) partes.push((ehCredito(it.forma) ? 'fatura de ' : 'entra em ') + mesCurto(c) + (n > 1 ? ' até ' + mesCurto(c + n - 1) : ''));
+    return partes.join(' · ');
+  }
+
+  function formItem(it, i, op) {
+    op = op || {};
+    const receita = it.tipo === 'receita';
+    const cats = receita ? S.cfg.catReceita : S.cfg.categorias;
+    return (
+      '<div class="item-form' + (op.semCard ? '' : ' card') + '" data-idx="' + i + '">' +
+      (op.removivel ? '<button type="button" class="fechar" data-acao="remover" aria-label="Remover">×</button>' : '') +
+      (op.semTipo
+        ? ''
+        : '<div class="tipo-toggle"><button type="button" data-tipo="gasto" class="' + (receita ? '' : 'ativo') + '">Gasto</button>' +
+          '<button type="button" data-tipo="receita" class="receita ' + (receita ? 'ativo' : '') + '">Receita</button></div>') +
+      '<div class="campos">' +
+      '<label class="inteiro">Descrição<input data-k="descricao" value="' + esc(it.descricao) + '" placeholder="Ex: Mercado"></label>' +
+      '<label>Valor total (R$)<input data-k="valor" inputmode="decimal" value="' + esc(fmtNum(it.valor)) + '" placeholder="0,00"></label>' +
+      '<label>Data<input type="date" data-k="data" value="' + esc(it.data) + '"></label>' +
+      '<label>Categoria<select data-k="categoria">' + opcoes(cats, it.categoria) + '</select></label>' +
+      '<label>Pessoa<select data-k="pessoa">' + opcoes(S.cfg.pessoas, it.pessoa) + '</select></label>' +
+      (receita
+        ? ''
+        : '<label>Pagamento<select data-k="forma">' + opcoes(S.cfg.formas, it.forma) + '</select></label>' +
+          '<label>Parcelas<input type="number" min="1" max="99" data-k="parcelas" value="' + esc(it.parcelas) + '"></label>') +
+      '</div><div class="pista">' + esc(pista(it)) + '</div></div>'
+    );
+  }
+
+  /** Liga um contêiner de formulários a uma lista de itens (rascunhos ou edição). */
+  function ligarForms(container, lista, render) {
+    const alvo = (e) => {
+      const f = e.target.closest('.item-form');
+      return f ? { f, it: lista()[+f.dataset.idx], i: +f.dataset.idx } : null;
+    };
+    container.addEventListener('input', (e) => {
+      const a = alvo(e);
+      if (!a || !e.target.dataset.k) return;
+      a.it[e.target.dataset.k] = e.target.value;
+      $('.pista', a.f).textContent = pista(a.it);
+    });
+    container.addEventListener('change', (e) => {
+      const a = alvo(e);
+      if (a && e.target.dataset.k) a.it[e.target.dataset.k] = e.target.value;
+    });
+    container.addEventListener('click', (e) => {
+      const a = alvo(e);
+      if (!a) return;
+      const tipo = e.target.dataset.tipo;
+      if (tipo && tipo !== a.it.tipo) {
+        a.it.tipo = tipo;
+        a.it.categoria = (tipo === 'receita' ? S.cfg.catReceita : S.cfg.categorias)[0];
+        render();
+      }
+      if (e.target.dataset.acao === 'remover') {
+        lista().splice(a.i, 1);
+        render();
+      }
+    });
+  }
+
+  function novoItem(base) {
+    return Object.assign(
+      { tipo: 'gasto', data: S.cfg.hoje, descricao: '', categoria: S.cfg.categorias[0], pessoa: pessoaPadrao(), forma: S.cfg.formas[0], valor: '', parcelas: 1 },
+      base
+    );
+  }
+
+  function validar(itens) {
+    for (const it of itens) {
+      if (!String(it.descricao || '').trim()) return 'Falta a descrição de um item.';
+      if (!numero(it.valor)) return 'Falta o valor de "' + it.descricao + '".';
+      if (!it.data) return 'Falta a data de "' + it.descricao + '".';
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------- tela: lançar
+  function renderRascunhos() {
+    $('#rascunhos').innerHTML = S.rascunhos.map((it, i) => formItem(it, i, { removivel: true })).join('');
+    $('#acoes-rascunho').hidden = !S.rascunhos.length;
+    atualizarBotaoSalvar();
+  }
+
+  function atualizarBotaoSalvar() {
+    const total = S.rascunhos.reduce((s, it) => s + (it.tipo === 'receita' ? 0 : numero(it.valor)), 0);
+    $('#btn-salvar').textContent = S.rascunhos.length > 1 ? 'Salvar ' + S.rascunhos.length + (total ? ' · ' + brl(total) : '') : 'Salvar';
+  }
+
+  async function interpretar() {
+    const texto = $('#txt').value.trim();
+    if (!texto) return toast('Escreva o que você gastou.', true);
+    const btn = $('#btn-ia');
+    ocupado(btn, 'Interpretando…');
+    try {
+      const itens = await run('apiInterpretarTexto', texto, pessoaPadrao());
+      if (!itens.length) return toast('Não encontrei nenhum gasto nesse texto.', true);
+      itens.forEach((it) => S.rascunhos.push(Object.assign(it, { origem: 'IA (texto)' })));
+      renderRascunhos();
+      toast('Confira e toque em Salvar.');
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+    }
+  }
+
+  async function lerFoto(file) {
+    const lbl = $('#foto').parentElement;
+    lbl.classList.add('girando');
+    toast('Lendo a nota com IA…');
+    try {
+      const arq = Object.assign(await prepararArquivo(file), { modo: 'cupom', pessoaPadrao: pessoaPadrao() });
+      const r = await run('apiLerArquivo', arq);
+      const itens = r.itens.filter((i) => !i.ignorar);
+      if (!itens.length) return toast('Não consegui achar o valor na imagem.', true);
+      itens.forEach((i) =>
+        S.rascunhos.push(novoItem({ tipo: i.tipo, data: i.data || S.cfg.hoje, descricao: i.descricao, categoria: i.categoria, valor: i.valor, parcelas: i.parcelaTotal, origem: 'IA (foto)' }))
+      );
+      renderRascunhos();
+      toast('Confira e toque em Salvar.');
+    } catch (e) {
+      erro(e);
+    } finally {
+      lbl.classList.remove('girando');
+    }
+  }
+
+  async function salvarRascunhos() {
+    const msg = validar(S.rascunhos);
+    if (msg) return toast(msg, true);
+    const btn = $('#btn-salvar');
+    ocupado(btn, 'Salvando…');
+    try {
+      const itens = S.rascunhos.map((it) => Object.assign({}, it, { id: it.id || novoIdCliente(), valor: numero(it.valor), parcelas: parseInt(it.parcelas, 10) || 1 }));
+      let r;
+      try {
+        r = await run('apiSalvar', itens);
+      } catch (e) {
+        if (!e.offline || NA_PLANILHA) throw e;
+        gravarFila(fila().concat(itens));
+        S.rascunhos = [];
+        $('#txt').value = '';
+        renderRascunhos();
+        return toast('📴 Sem internet: guardei no celular e envio sozinho quando a conexão voltar.');
+      }
+      toast('✅ Salvo' + (r.gastos ? ': ' + r.gastos + ' gasto(s)' : '') + (r.receitas ? (r.gastos ? ' e ' : ': ') + r.receitas + ' receita(s)' : ''));
+      S.rascunhos = [];
+      $('#txt').value = '';
+      renderRascunhos();
+      dadosMudaram();
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+    }
+  }
+
+  function linhaLancamento(l) {
+    const meta = [dataBR(l.data), l.categoria, l.pessoa, l.forma + (l.parcelas > 1 ? ' ' + l.parcelas + 'x' : ''), '→ ' + l.competencia];
+    return (
+      '<button class="linha" data-editar="' + esc(l.id) + '"><div class="info"><div class="desc">' + esc(l.descricao) + '</div>' +
+      '<div class="meta">' + esc(meta.filter(Boolean).join(' · ')) + '</div></div><div class="valor">' + brl(l.valor) + '</div></button>'
+    );
+  }
+
+  async function carregarUltimos() {
+    try {
+      const l = await run('apiUltimos', 15);
+      $('#ultimos').innerHTML = l.length ? l.map(linhaLancamento).join('') : '<div class="vazio">Nada lançado ainda. Comece escrevendo acima! ✍️</div>';
+    } catch (e) {
+      $('#ultimos').innerHTML = '<div class="vazio">' + esc(e.message) + '</div>';
+    }
+  }
+
+  /** Depois de salvar/editar/excluir: recarrega o que estiver visível e atualiza a aba Resumo em segundo plano. */
+  function dadosMudaram() {
+    carregarUltimos();
+    S.painel = null;
+    if ($('#tela-painel').classList.contains('ativa')) carregarPainel();
+    run('apiAtualizarResumo').catch(() => {});
+  }
+
+  // ---------------------------------------------------------------- edição
+  function renderEdicao() {
+    const it = S.edicao[0];
+    $('#form-editar').innerHTML =
+      '<h3>Editar lançamento</h3>' +
+      formItem(it, 0, { semCard: true, semTipo: true }) +
+      '<div class="botoes"><button type="button" class="perigo" data-acao="excluir">Excluir</button>' +
+      '<button value="cancel" class="secundario">Cancelar</button>' +
+      '<button type="button" class="primario" data-acao="salvar-edicao">Salvar</button></div>';
+  }
+
+  async function abrirEdicao(id) {
+    try {
+      const l = await run('apiLancamento', id);
+      S.edicao = [Object.assign(l, { tipo: 'gasto' })];
+      renderEdicao();
+      $('#dlg-editar').showModal();
+    } catch (e) {
+      erro(e);
+    }
+  }
+
+  function abrirReceita(item) {
+    $('#form-editar').innerHTML =
+      '<h3>' + esc(item.descricao) + '</h3><p>' + brl(item.valor) + ' · ' + esc(item.categoria) + ' · ' + esc(item.pessoa) + ' · ' + dataBR(item.data) + '</p>' +
+      '<div class="botoes"><button type="button" class="perigo" data-acao="excluir-receita" data-id="' + esc(item.id) + '">Excluir receita</button>' +
+      '<button value="cancel" class="secundario">Fechar</button></div>';
+    $('#dlg-editar').showModal();
+  }
+
+  async function acaoDialogo(e) {
+    const btn = e.target.closest('button[data-acao]');
+    if (!btn) return;
+    const acao = btn.dataset.acao;
+    try {
+      if (acao === 'salvar-edicao') {
+        const msg = validar(S.edicao);
+        if (msg) return toast(msg, true);
+        ocupado(btn, 'Salvando…');
+        const it = S.edicao[0];
+        await run('apiEditarLancamento', Object.assign({}, it, { valor: numero(it.valor), parcelas: parseInt(it.parcelas, 10) || 1 }));
+        toast('✅ Atualizado');
+      } else if (acao === 'excluir' || acao === 'excluir-receita') {
+        if (!confirmouClique(btn, 'Toque de novo para excluir')) return;
+        ocupado(btn, 'Excluindo…');
+        await run('apiExcluir', acao === 'excluir' ? 'Lançamento' : 'Receita', acao === 'excluir' ? S.edicao[0].id : btn.dataset.id);
+        toast('🗑️ Excluído');
+      } else {
+        return;
+      }
+      $('#dlg-editar').close();
+      dadosMudaram();
+    } catch (err) {
+      ocupado(btn);
+      erro(err);
+    }
+  }
+
+  // ---------------------------------------------------------------- tela: painel
+  async function carregarPainel() {
+    const pedido = ++S.painelPedido;
+    $('#mes-nome').textContent = mesLongo(S.mes);
+    $('#analise').hidden = true;
+    if (!S.painel) $('#kpis').innerHTML = '<div class="carregando">Calculando…</div>';
+    try {
+      const p = await run('apiPainel', S.mes);
+      if (pedido !== S.painelPedido) return;
+      S.painel = p;
+      renderPainel();
+    } catch (e) {
+      erro(e);
+    }
+  }
+
+  function kpi(rotulo, valor, sub, cls) {
+    return '<div class="kpi"><div class="r">' + esc(rotulo) + '</div><div class="v ' + (cls || '') + '">' + valor + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>';
+  }
+
+  function renderPainel() {
+    const p = S.painel;
+    const delta = p.gastosMesAnterior ? ((p.gastos - p.gastosMesAnterior) / p.gastosMesAnterior) * 100 : null;
+    const usoOrc = p.orcamentoTotal ? (p.gastos / p.orcamentoTotal) * 100 : null;
+    $('#kpis').innerHTML =
+      kpi('Renda', brl(p.renda)) +
+      kpi('Gastos', brl(p.gastos), delta === null ? '' : (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toFixed(0) + '% vs mês anterior') +
+      kpi('Saldo do mês', brl(p.saldo), '', p.saldo < 0 ? 'neg' : 'posi') +
+      kpi('Fatura do cartão', brl(p.porTipo['Cartão'] || 0), 'fixos ' + brl(p.porTipo['Fixo'] || 0)) +
+      kpi('Saldo acumulado', brl(p.saldoAcumulado), 'desde o 1º mês com dados', p.saldoAcumulado < 0 ? 'neg' : '') +
+      kpi('Orçamento', usoOrc === null ? '—' : usoOrc.toFixed(0) + '%', usoOrc === null ? 'defina em ⚙️ Config' : 'de ' + brl(p.orcamentoTotal), usoOrc > 100 ? 'neg' : '');
+
+    renderCategorias();
+
+    const maxS = Math.max(1, ...p.serie.map((s) => Math.max(s.renda, s.gastos)));
+    $('#serie').innerHTML = p.serie
+      .map(
+        (s) =>
+          '<button class="col' + (s.futuro ? ' futuro' : '') + (s.atual ? ' atual' : '') + '" data-mes="' + s.chave + '" title="' + esc(s.rotulo + ': renda ' + brl(s.renda) + ' · gastos ' + brl(s.gastos)) + '">' +
+          '<div class="barras"><div class="b renda" style="height:' + ((s.renda / maxS) * 100).toFixed(1) + '%"></div>' +
+          '<div class="b gasto" style="height:' + ((s.gastos / maxS) * 100).toFixed(1) + '%"></div></div><div class="rot">' + esc(s.chave.endsWith('-01') ? s.rotulo : s.rotulo.slice(0, 3)) + '</div></button>'
+      )
+      .join('');
+
+    const pessoas = S.cfg.pessoas.slice();
+    Object.keys(p.porPessoa).concat(Object.keys(p.rendaPorPessoa)).forEach((x) => !pessoas.includes(x) && pessoas.push(x));
+    $('#pessoas').innerHTML =
+      '<table class="simples"><tr><th></th><th>Lançado</th><th>' + esc(S.cfg.pessoaCompartilhada) + ' dividido</th><th>Renda</th></tr>' +
+      pessoas
+        .filter((x) => p.porPessoa[x] || p.rendaPorPessoa[x] || p.porPessoaRateado[x])
+        .map(
+          (x) =>
+            '<tr><td>' + esc(x || '(sem pessoa)') + '</td><td>' + brl(p.porPessoa[x] || 0) + '</td><td>' +
+            (x === S.cfg.pessoaCompartilhada ? '—' : brl(p.porPessoaRateado[x] || 0)) + '</td><td>' + brl(p.rendaPorPessoa[x] || 0) + '</td></tr>'
+        )
+        .join('') +
+      '</table>';
+
+    $('#card-fin').hidden = !p.financiamentos.length;
+    $('#fin').innerHTML = p.financiamentos
+      .map(
+        (f) =>
+          '<div class="linha"><div class="info"><div class="desc">' + esc(f.descricao) + '</div><div class="meta">' + f.pagas + '/' + f.total + ' pagas · ' + brl(f.parcela) + '/mês · termina ' + esc(f.termina) + '</div></div>' +
+          '<div class="valor">' + brl(f.saldoDevedor) + '</div></div>'
+      )
+      .join('');
+
+    const cats = [...new Set(p.itens.map((i) => i.categoria))].sort();
+    if (S.filtroCat && !cats.includes(S.filtroCat)) S.filtroCat = '';
+    $('#filtro-cat').innerHTML = '<option value="">Todas</option>' + cats.map((c) => '<option' + (c === S.filtroCat ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+    renderItens();
+  }
+
+  function renderCategorias() {
+    const p = S.painel;
+    const max = Math.max(1, ...p.categorias.map((c) => c.valor));
+    $('#cats').innerHTML = p.categorias.length
+      ? p.categorias
+          .map((c) => {
+            const temOrc = c.orcamento > 0;
+            const pct = temOrc ? c.valor / c.orcamento : c.valor / max;
+            const cls = temOrc ? (pct > 1 ? 'estouro' : pct > 0.85 ? 'perto' : '') : '';
+            const sub = [];
+            if (temOrc) sub.push(Math.round(pct * 100) + '% de ' + brl(c.orcamento) + (pct > 1 ? ' · passou ' + brl(c.valor - c.orcamento) : ''));
+            if (c.media) sub.push('média 3 meses ' + brl(c.media) + (c.valor > c.media * 1.2 && c.valor - c.media > 50 ? ' ▲' : ''));
+            return (
+              '<button class="cat' + (S.filtroCat === c.nome ? ' selecionada' : '') + '" data-cat="' + esc(c.nome) + '">' +
+              '<div class="topo-cat"><span>' + esc(c.nome) + '</span><b>' + brl(c.valor) + '</b></div>' +
+              '<div class="trilho' + (temOrc ? ' orc' : '') + '"><div class="enchimento ' + cls + '" style="width:' + Math.min(100, pct * 100).toFixed(1) + '%"></div></div>' +
+              (sub.length ? '<div class="sub">' + esc(sub.join(' · ')) + '</div>' : '') + '</button>'
+            );
+          })
+          .join('')
+      : '<div class="vazio">Sem gastos neste mês.</div>';
+  }
+
+  function renderItens() {
+    const itens = S.painel.itens.filter((i) => !S.filtroCat || i.categoria === S.filtroCat);
+    $('#itens').innerHTML = itens.length
+      ? itens
+          .map((i, k) => {
+            const receita = i.tipo === 'Receita';
+            const meta = [dataBR(i.data), i.categoria, i.pessoa, i.tipo + (i.parcela ? ' ' + i.parcela : '')];
+            return (
+              '<button class="linha" data-item="' + k + '"><div class="info"><div class="desc">' + esc(i.descricao) + '</div>' +
+              '<div class="meta">' + esc(meta.filter(Boolean).join(' · ')) + '</div></div>' +
+              '<div class="valor' + (receita ? ' pos' : '') + '">' + (receita ? '+' : '') + brl(i.valor) + '</div></button>'
+            );
+          })
+          .join('')
+      : '<div class="vazio">Nada por aqui.</div>';
+    S.itensVisiveis = itens;
+  }
+
+  function clicarItem(item) {
+    if (item.tipo === 'Cartão' || item.tipo === 'Avulso') return abrirEdicao(item.id);
+    if (item.tipo === 'Receita') return item.recorrente ? toast('Receita recorrente: edite na aba Receitas da planilha.') : abrirReceita(item);
+    toast((item.tipo === 'Fixo' ? 'Gasto fixo' : 'Financiamento') + ': edite na aba "' + (item.tipo === 'Fixo' ? 'Gastos Fixos' : 'Financiamentos') + '" da planilha.');
+  }
+
+  async function analisarMes() {
+    const btn = $('#btn-analisar');
+    ocupado(btn, 'Analisando…');
+    try {
+      const texto = await run('apiAnalisarMes', S.mes);
+      $('#analise').innerHTML = md(texto);
+      $('#analise').hidden = false;
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+    }
+  }
+
+  function irParaMes(c) {
+    S.mes = c;
+    S.filtroCat = '';
+    carregarPainel();
+  }
+
+  // ---------------------------------------------------------------- tela: importar
+  function definirModo(modo) {
+    S.modo = modo;
+    $$('#modo button').forEach((b) => b.classList.toggle('ativo', b.dataset.modo === modo));
+    $('#campo-mes').hidden = modo !== 'fatura';
+    const forma = modo === 'fatura' ? S.cfg.formas.find(ehCredito) : S.cfg.formas.find((f) => !ehCredito(f));
+    if (forma) $('#forma-import').value = forma;
+  }
+
+  async function processarImportacao(file) {
+    const lbl = $('#arquivo').parentElement;
+    lbl.classList.add('girando');
+    $('#import-resultado').hidden = true;
+    toast('Lendo o arquivo com IA… pode levar até 1 minuto.');
+    try {
+      const arq = Object.assign(await prepararArquivo(file), { modo: S.modo, pessoaPadrao: pessoaPadrao() });
+      const r = await run('apiLerArquivo', arq);
+      if (S.modo === 'fatura' && r.mesFatura) $('#mes-fatura').value = r.mesFatura;
+      const pessoa = pessoaPadrao();
+      S.imp = { itens: r.itens.map((i) => Object.assign(i, { pessoa })), finais: {} };
+      S.imp.itens.forEach((i) => i.cartaoFinal && (S.imp.finais[i.cartaoFinal] = lembrar('final.' + i.cartaoFinal) || pessoa));
+      S.imp.itens.forEach((i) => i.cartaoFinal && (i.pessoa = S.imp.finais[i.cartaoFinal]));
+      await marcarDuplicados();
+      renderImportacao();
+      $('#import-resultado').hidden = false;
+      toast(S.imp.itens.length + ' transações encontradas. Revise e importe.');
+    } catch (e) {
+      erro(e);
+    } finally {
+      lbl.classList.remove('girando');
+      $('#arquivo').value = '';
+    }
+  }
+
+  async function marcarDuplicados() {
+    const mesF = S.modo === 'fatura' ? $('#mes-fatura').value : '';
+    const dups = await run('apiMarcarDuplicados', S.imp.itens, mesF, S.modo);
+    S.imp.itens.forEach((i, k) => {
+      i.dup = dups[k];
+      i.sel = !i.ignorar && !i.dup;
+    });
+  }
+
+  function renderImportacao() {
+    const finais = Object.keys(S.imp.finais);
+    $('#import-cartoes').hidden = !finais.length;
+    $('#import-cartoes').innerHTML =
+      '<h3>De quem é cada cartão?</h3><div class="campos">' +
+      finais.map((f) => '<label>Final ' + esc(f) + '<select data-final="' + esc(f) + '">' + opcoes(S.cfg.pessoas, S.imp.finais[f]) + '</select></label>').join('') +
+      '</div>';
+    $('#import-lista').innerHTML = S.imp.itens
+      .map((i, k) => {
+        const cats = i.tipo === 'receita' ? S.cfg.catReceita : S.cfg.categorias;
+        return (
+          '<div class="imp' + (i.sel ? '' : ' desmarcado') + '" data-i="' + k + '">' +
+          '<input type="checkbox" data-k="sel"' + (i.sel ? ' checked' : '') + ' aria-label="Importar">' +
+          '<input class="desc-in" data-k="descricao" value="' + esc(i.descricao) + '">' +
+          '<div class="valor' + (i.tipo === 'receita' ? ' pos' : '') + '">' + (i.tipo === 'receita' ? '+' : '') + brl(i.valor) + '</div>' +
+          '<div class="sub">' + dataBR(i.data) +
+          (i.parcelaTotal > 1 ? '<span class="badge">' + i.parcelaAtual + '/' + i.parcelaTotal + '</span>' : '') +
+          (i.cartaoFinal ? '<span class="badge">final ' + esc(i.cartaoFinal) + '</span>' : '') +
+          '<select data-k="categoria">' + opcoes(cats, i.categoria) + '</select>' +
+          '<select data-k="pessoa">' + opcoes(S.cfg.pessoas, i.pessoa) + '</select>' +
+          (i.dup ? '<span class="badge alerta">parece já cadastrado</span>' : '') +
+          (i.ignorar ? '<span class="badge alerta">' + esc(i.motivo || 'sugiro ignorar') + '</span>' : '') +
+          '</div></div>'
+        );
+      })
+      .join('');
+    resumoImportacao();
+  }
+
+  function resumoImportacao() {
+    const sel = S.imp.itens.filter((i) => i.sel);
+    const total = sel.reduce((s, i) => s + (i.tipo === 'receita' ? 0 : i.valor), 0);
+    $('#import-resumo').textContent = S.imp.itens.length + ' encontradas · ' + sel.length + ' selecionadas · ' + brl(total) + ' em gastos';
+    $('#btn-importar').textContent = 'Importar ' + sel.length;
+    $('#btn-importar').disabled = !sel.length;
+  }
+
+  async function importar() {
+    const sel = S.imp.itens.filter((i) => i.sel);
+    if (!sel.length) return;
+    const mesF = S.modo === 'fatura' ? $('#mes-fatura').value : '';
+    if (S.modo === 'fatura' && !mesF) return toast('Informe o mês de vencimento da fatura.', true);
+    const btn = $('#btn-importar');
+    ocupado(btn, 'Importando…');
+    try {
+      const r = await run('apiImportar', sel, mesF, S.modo, $('#forma-import').value);
+      toast('✅ Importado: ' + (r.gastos + r.receitas) + ' itens');
+      S.imp = null;
+      $('#import-resultado').hidden = true;
+      dadosMudaram();
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+    }
+  }
+
+  // ---------------------------------------------------------------- tela: IA
+  function addMsg(papel, html) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + papel + (papel === 'model' ? ' md' : '');
+    el.innerHTML = html;
+    $('#chat').appendChild(el);
+    el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return el;
+  }
+
+  async function perguntar(texto) {
+    texto = texto.trim();
+    if (!texto) return;
+    $('#sugestoes').hidden = true;
+    $('#pergunta').value = '';
+    addMsg('user', esc(texto));
+    const historico = S.chat.slice();
+    S.chat.push({ papel: 'user', texto });
+    const el = addMsg('model', '<span class="girando"></span>');
+    try {
+      const r = await run('apiConversar', texto, historico, S.mes);
+      el.innerHTML = md(r);
+      S.chat.push({ papel: 'model', texto: r });
+    } catch (e) {
+      el.textContent = '⚠️ ' + e.message;
+      S.chat.pop();
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+
+  // ---------------------------------------------------------------- tela: config
+  const LISTAS_EDIT = ['pessoas', 'formas', 'catReceita'];
+
+  async function carregarConfig() {
+    $('#config-carregando').hidden = false;
+    $('#config-carregando').textContent = 'Carregando…';
+    $('#config-conteudo').hidden = true;
+    try {
+      prepararConfig(await run('apiConfig'));
+    } catch (e) {
+      $('#config-carregando').textContent = '⚠️ ' + e.message;
+      return;
+    }
+    renderConfig();
+    $('#config-carregando').hidden = true;
+    $('#config-conteudo').hidden = false;
+  }
+
+  function prepararConfig(c) {
+    S.confServidor = c;
+    const lista = (l) => l.map((v) => ({ valor: v, orig: v }));
+    S.conf = {
+      diaFechamento: c.diaFechamento,
+      diaVencimento: c.diaVencimento,
+      pessoaCompartilhada: c.pessoaCompartilhada,
+      modelo: c.modelo,
+      emails: c.emails,
+      pessoas: lista(c.pessoas),
+      formas: lista(c.formas),
+      catReceita: lista(c.catReceita),
+      categorias: c.categorias.map((x) => ({ nome: x.nome, orcamento: x.orcamento ? fmtNum(x.orcamento) : '', dica: x.dica, orig: x.nome })),
+    };
+    S.confMudou = false;
+  }
+
+  const notaRenomeado = (orig, atual) =>
+    orig && String(atual).trim() && String(atual).trim() !== orig ? '<div class="renomeado">antes: ' + esc(orig) + ' — os lançamentos serão atualizados</div>' : '';
+
+  function renderListaEdit(nome) {
+    $('#cfg-' + nome).innerHTML = S.conf[nome]
+      .map(
+        (it, i) =>
+          '<div data-lista="' + nome + '" data-i="' + i + '"><div class="linha-campo"><input data-campo="valor" value="' + esc(it.valor) + '">' +
+          '<button type="button" class="remover" data-remover aria-label="Remover">×</button></div>' + notaRenomeado(it.orig, it.valor) + '</div>'
+      )
+      .join('');
+  }
+
+  function renderCategoriasEdit() {
+    $('#cfg-categorias').innerHTML = S.conf.categorias
+      .map(
+        (c, i) =>
+          '<div class="cat-edit" data-lista="categorias" data-i="' + i + '">' +
+          '<input data-campo="nome" value="' + esc(c.nome) + '" placeholder="Nome" aria-label="Nome">' +
+          '<input data-campo="orcamento" value="' + esc(c.orcamento) + '" inputmode="decimal" placeholder="Orçamento" aria-label="Orçamento mensal">' +
+          '<button type="button" class="remover" data-remover aria-label="Remover">×</button>' +
+          '<input class="dica-in" data-campo="dica" value="' + esc(c.dica) + '" placeholder="O que entra aqui (ajuda a IA)" aria-label="Dica para a IA">' +
+          notaRenomeado(c.orig, c.nome) + '</div>'
+      )
+      .join('');
+  }
+
+  function renderCompartilhada() {
+    const nomes = S.conf.pessoas.map((p) => p.valor.trim()).filter(Boolean);
+    $('#cfg-compartilhada').innerHTML =
+      '<option value="">(nenhuma)</option>' + nomes.map((n) => '<option' + (n === S.conf.pessoaCompartilhada ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
+  }
+
+  function exemploCartao() {
+    const f = parseInt(S.conf.diaFechamento, 10);
+    const v = parseInt(S.conf.diaVencimento, 10);
+    $('#cfg-exemplo').textContent =
+      f >= 1 && f <= 31 && v >= 1 && v <= 31
+        ? 'Compras até o dia ' + f + ' entram na fatura que vence dia ' + v + (v > f ? ' do mesmo mês' : ' do mês seguinte') + '; depois do dia ' + f + ', na fatura seguinte.'
+        : '';
+  }
+
+  function renderGatilhos() {
+    const ativo = S.confServidor.gatilhos;
+    $('#gatilhos-status').textContent = ativo
+      ? '✅ Ativo: a aba Resumo é atualizada todo dia e a análise do mês chega por e-mail todo dia 1º.'
+      : 'Desligado: ative para receber todo dia 1º, por e-mail, a análise do mês anterior.';
+    $('#btn-gatilhos').textContent = ativo ? 'Desativar e-mail mensal' : '📬 Ativar e-mail mensal';
+  }
+
+  function renderConfig() {
+    const c = S.conf;
+    const srv = S.confServidor;
+    $('#chave-status').textContent = srv.temChave ? '✅ Chave configurada. Para trocar, cole outra.' : '⚠️ Sem chave: a parte de IA fica desligada.';
+    $('#modelo-uso').textContent = srv.modeloEmUso !== c.modelo ? 'Em uso agora: ' + srv.modeloEmUso + ' (o configurado não respondeu, então troquei automaticamente).' : '';
+    $('#cfg-fech').value = c.diaFechamento;
+    $('#cfg-venc').value = c.diaVencimento;
+    $('#cfg-modelo').value = c.modelo;
+    $('#cfg-emails').value = c.emails;
+    exemploCartao();
+    LISTAS_EDIT.forEach(renderListaEdit);
+    renderCategoriasEdit();
+    renderCompartilhada();
+    renderGatilhos();
+  }
+
+  function editarConfig(e, final) {
+    const t = e.target;
+    if (t.dataset.cfg) {
+      S.conf[t.dataset.cfg] = t.value;
+      S.confMudou = true;
+      if (t.dataset.cfg === 'diaFechamento' || t.dataset.cfg === 'diaVencimento') exemploCartao();
+      return;
+    }
+    const linha = t.closest('[data-lista]');
+    if (!linha || !t.dataset.campo) return;
+    const lista = linha.dataset.lista;
+    const it = S.conf[lista][+linha.dataset.i];
+    if (lista === 'pessoas' && it.valor.trim() === S.conf.pessoaCompartilhada) S.conf.pessoaCompartilhada = t.value.trim();
+    it[t.dataset.campo] = t.value;
+    S.confMudou = true;
+    if (final) {
+      lista === 'categorias' ? renderCategoriasEdit() : renderListaEdit(lista);
+      if (lista === 'pessoas') renderCompartilhada();
+    }
+  }
+
+  function cliqueConfig(e) {
+    const add = e.target.closest('[data-add]');
+    if (add) {
+      const lista = add.dataset.add;
+      S.conf[lista].push(lista === 'categorias' ? { nome: '', orcamento: '', dica: '', orig: '' } : { valor: '', orig: '' });
+      lista === 'categorias' ? renderCategoriasEdit() : renderListaEdit(lista);
+      const inputs = $$('#cfg-' + lista + ' input[data-campo="' + (lista === 'categorias' ? 'nome' : 'valor') + '"]');
+      inputs[inputs.length - 1].focus();
+      S.confMudou = true;
+      return;
+    }
+    if (e.target.closest('[data-remover]')) {
+      const linha = e.target.closest('[data-lista]');
+      const lista = linha.dataset.lista;
+      S.conf[lista].splice(+linha.dataset.i, 1);
+      lista === 'categorias' ? renderCategoriasEdit() : renderListaEdit(lista);
+      if (lista === 'pessoas') renderCompartilhada();
+      S.confMudou = true;
+    }
+  }
+
+  async function salvarConfig() {
+    const c = S.conf;
+    const renomear = { categorias: {} };
+    LISTAS_EDIT.forEach((l) => {
+      renomear[l] = {};
+      c[l].forEach((it) => it.orig && it.valor.trim() && it.valor.trim() !== it.orig && (renomear[l][it.orig] = it.valor.trim()));
+    });
+    c.categorias.forEach((x) => x.orig && x.nome.trim() && x.nome.trim() !== x.orig && (renomear.categorias[x.orig] = x.nome.trim()));
+    const btn = $('#btn-config-salvar');
+    ocupado(btn, 'Salvando…');
+    try {
+      const ini = await run('apiSalvarConfig', {
+        diaFechamento: c.diaFechamento,
+        diaVencimento: c.diaVencimento,
+        pessoaCompartilhada: c.pessoaCompartilhada,
+        modelo: c.modelo,
+        modeloAnterior: S.confServidor.modelo,
+        emails: c.emails,
+        pessoas: c.pessoas.map((x) => x.valor),
+        formas: c.formas.map((x) => x.valor),
+        catReceita: c.catReceita.map((x) => x.valor),
+        categorias: c.categorias.map((x) => ({ nome: x.nome, orcamento: numero(x.orcamento), dica: x.dica })),
+        renomear,
+      });
+      S.cfg = ini;
+      aplicarCfg();
+      S.painel = null;
+      carregarUltimos();
+      await carregarConfig();
+      toast('✅ Configurações salvas');
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+    }
+  }
+
+  async function salvarChave() {
+    const btn = $('#btn-chave');
+    ocupado(btn, 'Testando…');
+    try {
+      await run('apiSalvarChave', $('#chave').value);
+      $('#chave').value = '';
+      S.confServidor.temChave = S.cfg.temChave = true;
+      aplicarCfg();
+      renderConfig();
+      toast('✅ Chave salva e funcionando');
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+    }
+  }
+
+  async function alternarGatilhos() {
+    const btn = $('#btn-gatilhos');
+    ocupado(btn, 'Aguarde…');
+    try {
+      S.confServidor.gatilhos = await run('apiDefinirGatilhos', !S.confServidor.gatilhos);
+      toast(S.confServidor.gatilhos ? '✅ E-mail mensal ativado' : 'E-mail mensal desativado');
+    } catch (e) {
+      erro(e);
+    } finally {
+      ocupado(btn);
+      renderGatilhos();
+    }
+  }
+
+  // ---------------------------------------------------------------- navegação e eventos
+  function irParaTela(nome) {
+    $$('.tela').forEach((t) => t.classList.toggle('ativa', t.id === 'tela-' + nome));
+    $$('.abas button').forEach((b) => b.classList.toggle('ativo', b.dataset.tela === nome));
+    guardar('tela', nome);
+    window.scrollTo(0, 0);
+    if (nome === 'painel' && !S.painel) carregarPainel();
+    if (nome === 'config' && !S.confMudou) carregarConfig();
+  }
+
+  function ligarEventos() {
+    $$('.abas button').forEach((b) => b.addEventListener('click', () => irParaTela(b.dataset.tela)));
+    $('#pessoa-padrao').addEventListener('change', (e) => guardar('pessoa', e.target.value));
+
+    // lançar
+    $('#btn-ia').addEventListener('click', interpretar);
+    $('#txt').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) interpretar();
+    });
+    $('#btn-manual').addEventListener('click', () => {
+      S.rascunhos.push(novoItem({ origem: 'Manual' }));
+      renderRascunhos();
+      const ultimo = $$('#rascunhos .item-form').pop();
+      if (ultimo) $('input[data-k=descricao]', ultimo).focus();
+    });
+    $('#foto').addEventListener('change', (e) => e.target.files[0] && lerFoto(e.target.files[0]).then(() => (e.target.value = '')));
+    ligarForms($('#rascunhos'), () => S.rascunhos, renderRascunhos);
+    $('#rascunhos').addEventListener('input', atualizarBotaoSalvar);
+    $('#btn-salvar').addEventListener('click', salvarRascunhos);
+    $('#btn-descartar').addEventListener('click', () => {
+      S.rascunhos = [];
+      renderRascunhos();
+    });
+    $('#ultimos').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-editar]');
+      if (b) abrirEdicao(b.dataset.editar);
+    });
+
+    // edição
+    ligarForms($('#form-editar'), () => S.edicao, renderEdicao);
+    $('#form-editar').addEventListener('click', acaoDialogo);
+    // Enter num campo não deve fechar o diálogo sem salvar
+    $('#form-editar').addEventListener('submit', (e) => {
+      if (!e.submitter || e.submitter.value !== 'cancel') e.preventDefault();
+    });
+
+    // painel
+    $('#mes-ant').addEventListener('click', () => irParaMes(chave(idx(S.mes) - 1)));
+    $('#mes-prox').addEventListener('click', () => irParaMes(chave(idx(S.mes) + 1)));
+    $('#serie').addEventListener('click', (e) => {
+      const c = e.target.closest('[data-mes]');
+      if (c && c.dataset.mes !== S.mes) irParaMes(c.dataset.mes);
+    });
+    $('#cats').addEventListener('click', (e) => {
+      const c = e.target.closest('[data-cat]');
+      if (!c) return;
+      S.filtroCat = S.filtroCat === c.dataset.cat ? '' : c.dataset.cat;
+      $('#filtro-cat').value = S.filtroCat;
+      renderCategorias();
+      renderItens();
+      if (S.filtroCat) $('#itens').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    $('#filtro-cat').addEventListener('change', (e) => {
+      S.filtroCat = e.target.value;
+      renderCategorias();
+      renderItens();
+    });
+    $('#itens').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-item]');
+      if (b) clicarItem(S.itensVisiveis[+b.dataset.item]);
+    });
+    $('#btn-analisar').addEventListener('click', analisarMes);
+
+    // importar
+    $$('#modo button').forEach((b) => b.addEventListener('click', () => definirModo(b.dataset.modo)));
+    $('#arquivo').addEventListener('change', (e) => e.target.files[0] && processarImportacao(e.target.files[0]));
+    $('#mes-fatura').addEventListener('change', async () => {
+      if (!S.imp) return;
+      await marcarDuplicados().catch(erro);
+      renderImportacao();
+    });
+    $('#import-cartoes').addEventListener('change', (e) => {
+      const f = e.target.dataset.final;
+      if (!f) return;
+      S.imp.finais[f] = e.target.value;
+      guardar('final.' + f, e.target.value);
+      S.imp.itens.forEach((i) => i.cartaoFinal === f && (i.pessoa = e.target.value));
+      renderImportacao();
+    });
+    const editarImp = (e) => {
+      const row = e.target.closest('.imp');
+      if (!row || !e.target.dataset.k) return;
+      const it = S.imp.itens[+row.dataset.i];
+      const k = e.target.dataset.k;
+      it[k] = k === 'sel' ? e.target.checked : e.target.value;
+      if (k === 'sel') {
+        row.classList.toggle('desmarcado', !it.sel);
+        resumoImportacao();
+      }
+    };
+    $('#import-lista').addEventListener('change', editarImp);
+    $('#import-lista').addEventListener('input', editarImp);
+    $('#btn-importar').addEventListener('click', importar);
+    $('#btn-cancelar-import').addEventListener('click', () => {
+      S.imp = null;
+      $('#import-resultado').hidden = true;
+    });
+
+    // IA
+    $('#form-chat').addEventListener('submit', (e) => {
+      e.preventDefault();
+      perguntar($('#pergunta').value);
+    });
+    $('#sugestoes').addEventListener('click', (e) => e.target.tagName === 'BUTTON' && perguntar(e.target.textContent));
+
+    // config
+    $('#config-conteudo').addEventListener('input', (e) => editarConfig(e, false));
+    $('#config-conteudo').addEventListener('change', (e) => editarConfig(e, true));
+    $('#config-conteudo').addEventListener('click', cliqueConfig);
+    $('#btn-config-salvar').addEventListener('click', salvarConfig);
+    $('#btn-config-desfazer').addEventListener('click', () => {
+      prepararConfig(S.confServidor);
+      renderConfig();
+      toast('Alterações descartadas');
+    });
+    $('#btn-chave').addEventListener('click', salvarChave);
+    $('#btn-gatilhos').addEventListener('click', alternarGatilhos);
+
+    // este aparelho (só no app PWA)
+    const copiarCodigo = async () => {
+      try {
+        await navigator.clipboard.writeText(codigoConexao());
+        toast('📋 Código copiado');
+      } catch (e) {
+        toast('Não consegui copiar automaticamente.', true);
+      }
+    };
+    $('#btn-copiar-codigo').addEventListener('click', copiarCodigo);
+    $('#btn-ios-copiar').addEventListener('click', copiarCodigo);
+    $('#btn-instalar').addEventListener('click', async () => {
+      if (!S.instalar) return;
+      S.instalar.prompt();
+      await S.instalar.userChoice;
+      S.instalar = null;
+      renderAparelho();
+    });
+    $('#btn-desconectar').addEventListener('click', (e) => {
+      if (!confirmouClique(e.currentTarget, 'Toque de novo para desconectar')) return;
+      desconectar('Aparelho desconectado.');
+    });
+
+    // arquivo recebido pelo "Compartilhar"
+    $('#btn-ler-pendente').addEventListener('click', () => {
+      $('#import-pendente').hidden = true;
+      if (S.pendente) processarImportacao(S.pendente);
+      S.pendente = null;
+    });
+    $('#btn-pendente-nota').addEventListener('click', () => {
+      $('#import-pendente').hidden = true;
+      irParaTela('lancar');
+      if (S.pendente) lerFoto(S.pendente);
+      S.pendente = null;
+    });
+    $('#btn-resumo').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      ocupado(btn, 'Atualizando…');
+      try {
+        await run('apiAtualizarResumo');
+        toast('✅ Aba Resumo atualizada');
+      } catch (err) {
+        erro(err);
+      } finally {
+        ocupado(btn);
+      }
+    });
+  }
+
+  /** Preenche os seletores que dependem da configuração (mantendo o que já estava escolhido). */
+  function aplicarCfg() {
+    const atual = $('#pessoa-padrao').value || lembrar('pessoa');
+    $('#pessoa-padrao').innerHTML = opcoes(S.cfg.pessoas, S.cfg.pessoas.includes(atual) ? atual : S.cfg.pessoas[0]);
+    const forma = $('#forma-import').value;
+    $('#forma-import').innerHTML = opcoes(S.cfg.formas, S.cfg.formas.includes(forma) ? forma : S.cfg.formas[0]);
+    $('#aviso-chave').hidden = S.cfg.temChave;
+  }
+
+  // ---------------------------------------------------------------- inicialização
+  /** Tela usada para erros e para conectar o app (esconde as abas normais). */
+  function mostrarSistema(html) {
+    $$('.tela').forEach((t) => t.classList.remove('ativa'));
+    $('#tela-sistema').innerHTML = html;
+    $('#tela-sistema').classList.add('ativa');
+    $('.abas').hidden = true;
+  }
+
+  function telaConectar(msg) {
+    mostrarSistema(
+      '<div class="card"><h3>📲 Conectar o app</h3>' +
+        (msg ? '<p class="aviso">' + esc(msg) + '</p>' : '') +
+        '<p>Na planilha, abra o menu <b>💰 Gastos → 📲 Conectar celular</b> e aponte a câmera do celular para o QR code.</p>' +
+        '<p class="dica">Instalou no iPhone e abriu pelo ícone? Cole aqui o link do QR ou o código de conexão:</p>' +
+        '<textarea id="conexao-in" rows="3" placeholder="https://…#conectar=… ou o código"></textarea>' +
+        '<div class="botoes"><button id="btn-conectar" class="primario">Conectar</button></div></div>'
+    );
+    $('#btn-conectar').addEventListener('click', () => {
+      const c = decodificarConexao($('#conexao-in').value);
+      if (!c) return toast('Código inválido. Copie o link inteiro do QR.', true);
+      guardar('conexao', JSON.stringify(c));
+      iniciar();
+    });
+  }
+
+  function desconectar(msg) {
+    esquecer('conexao');
+    telaConectar(msg);
+  }
+
+  function lerConexaoDoLink() {
+    if (!/conectar=/.test(location.hash)) return;
+    const c = decodificarConexao(location.hash);
+    if (c) {
+      guardar('conexao', JSON.stringify(c));
+      guardar('veioDoLink', '1');
+    }
+    history.replaceState(null, '', location.pathname + location.search); // tira o código da barra de endereço
+  }
+
+  const ehIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const instalado = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+  /** Arquivo recebido pelo "Compartilhar" do Android (o service worker guarda no cache). */
+  async function arquivoCompartilhado() {
+    if (NA_PLANILHA || !new URLSearchParams(location.search).has('compartilhado') || !('caches' in window)) return;
+    history.replaceState(null, '', location.pathname);
+    const cache = await caches.open('compartilhado');
+    const chaveArq = new URL('arquivo-compartilhado', location.href).href;
+    const resp = await cache.match(chaveArq);
+    if (!resp) return;
+    await cache.delete(chaveArq);
+    const blob = await resp.blob();
+    const nome = decodeURIComponent(resp.headers.get('X-Nome') || 'arquivo');
+    S.pendente = new File([blob], nome, { type: blob.type });
+    irParaTela('importar');
+    $('#import-pendente-nome').textContent = nome;
+    $('#import-pendente').hidden = false;
+  }
+
+  function renderAparelho() {
+    if (NA_PLANILHA) return;
+    $('#card-aparelho').hidden = false;
+    $('#btn-instalar').hidden = !S.instalar;
+  }
+
+  async function iniciar() {
+    if (!NA_PLANILHA && !conexao()) return telaConectar();
+    try {
+      S.cfg = await run('apiInicio');
+    } catch (e) {
+      if (e.auth) return;
+      const faltaSetup = /não encontrada|Configurar planilha/i.test(e.message);
+      mostrarSistema(
+        '<div class="card"><h3>' + (faltaSetup ? 'Falta preparar a planilha' : 'Não consegui abrir') + '</h3>' +
+          (faltaSetup
+            ? '<p>A planilha ainda não tem a estrutura nova. Posso criar agora: as abas antigas são renomeadas para "Antigo - …" e ocultadas (nada é apagado), e seus lançamentos, fixos, financiamentos, receitas e configurações são copiados.</p>' +
+              '<button id="btn-configurar" class="primario largo">🛠️ Configurar agora</button>'
+            : '<button id="btn-tentar" class="primario largo">Tentar de novo</button>') +
+          '<p class="dica">' + esc(e.message) + '</p></div>'
+      );
+      const tentar = $('#btn-tentar');
+      if (tentar) tentar.addEventListener('click', iniciar);
+      const btn = $('#btn-configurar');
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          ocupado(btn, 'Configurando… (pode levar ~30s)');
+          try {
+            await run('apiConfigurar');
+          } catch (err) {
+            ocupado(btn);
+            return erro(err);
+          }
+          toast('✅ Planilha configurada!');
+          iniciar();
+        });
+      }
+      return;
+    }
+    // "hoje" sempre do relógio do aparelho (a resposta pode ter vindo do cache offline)
+    const agora = new Date();
+    S.cfg.hoje = agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0') + '-' + String(agora.getDate()).padStart(2, '0');
+    S.cfg.mesAtual = S.cfg.hoje.slice(0, 7);
+    S.mes = S.cfg.mesAtual;
+    $('.abas').hidden = false;
+    aplicarCfg();
+    $('#mes-fatura').value = S.cfg.proximaFatura;
+    definirModo('fatura');
+    carregarUltimos();
+    const telaInicial = new URLSearchParams(location.search).get('tela') || lembrar('tela'); // ?tela= vem dos atalhos do ícone
+    irParaTela(telaInicial && $('#tela-' + telaInicial) ? telaInicial : 'lancar');
+    renderAparelho();
+    $('#dica-ios').hidden = !(ehIOS && !instalado && lembrar('veioDoLink'));
+    gravarFila(fila());
+    enviarFila();
+    arquivoCompartilhado();
+  }
+
+  ligarEventos();
+  if (!NA_PLANILHA) {
+    lerConexaoDoLink();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    window.addEventListener('online', enviarFila);
+    // link do QR aberto com o app já aberto na mesma aba: só o "#" muda, a página não recarrega
+    window.addEventListener('hashchange', () => {
+      if (!/conectar=/.test(location.hash)) return;
+      lerConexaoDoLink();
+      iniciar();
+    });
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      S.instalar = e;
+      renderAparelho();
+    });
+  }
+  iniciar();
+</script>
+
+  </body>
+</html>
